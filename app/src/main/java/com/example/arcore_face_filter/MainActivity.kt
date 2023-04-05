@@ -1,24 +1,60 @@
 package com.example.arcore_face_filter
 
+import android.annotation.SuppressLint
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.graphics.Bitmap
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.provider.MediaStore
 import android.widget.Button
+import android.widget.ImageView
+import android.widget.Toast
+import com.example.arcore_face_filter.R.id.takePicBtn
 
 class MainActivity : AppCompatActivity() {
+
+    lateinit var imageView: ImageView
+    lateinit var takePicBtn: Button
+    val REQUEST_IMAGE_CAPTURE = 100
+
+    @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val logoutBtn =findViewById<Button>(R.id.logoutButton)
-        logoutBtn.setOnClickListener{
+        val logoutBtn = findViewById<Button>(R.id.logoutButton)
+        logoutBtn.setOnClickListener {
             val toLogin = Intent(this, LoginActivity::class.java)
             startActivity(toLogin)
         }
 
+        imageView = findViewById(R.id.cameraImageView)
+        takePicBtn = findViewById(R.id.takePicBtn)
+
+        takePicBtn.setOnClickListener {
+            val takePicIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+
+            try {
+                startActivityForResult(takePicIntent, REQUEST_IMAGE_CAPTURE)
+            } catch (e: ActivityNotFoundException) {
+                Toast.makeText(this, "Error: " + e.localizedMessage, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if(requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
+            val imageBitmap = data?.extras?.get("data") as Bitmap
+            imageView.setImageBitmap(imageBitmap)
+        }
+        else {
+            super.onActivityResult(requestCode, resultCode, data)
+        }
+    }
+
         // Enable AR-related functionality on ARCore supported devices only.
         //maybeEnableArButton()
-    }
 
     /*fun maybeEnableArButton() {
         val availability = ArCoreApk.getInstance().checkAvailability(this)
