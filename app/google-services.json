@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "224839824345",
+    "project_id": "arcore-cis-357-final",
+    "storage_bucket": "arcore-cis-357-final.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:224839824345:android:32d7e9c5d55e2577a31fc8",
+        "android_client_info": {
+          "package_name": "com.example.arcore_face_filter"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "224839824345-8lem8g6vtm83fgml9m302h9sqvpm5adj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCUJSMdBTDLNIRmMixqWyuFImuk5Voqs-c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "224839824345-8lem8g6vtm83fgml9m302h9sqvpm5adj.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
