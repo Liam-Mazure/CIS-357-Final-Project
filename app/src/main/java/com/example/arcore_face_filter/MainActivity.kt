@@ -3,6 +3,7 @@ package com.example.arcore_face_filter
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -13,31 +14,54 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.example.arcore_face_filter.R.id.takePicBtn
 import com.google.ar.core.ArCoreApk
 import com.google.ar.core.CameraConfig
 import com.google.ar.core.CameraConfigFilter
 import com.google.ar.core.Session
 import com.google.ar.core.exceptions.UnavailableUserDeclinedInstallationException
+import android.Manifest
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.os.Environment
+import android.provider.Settings
+import androidx.appcompat.app.AlertDialog
+import androidx.core.content.FileProvider
+import java.io.File
+import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.*
+import kotlin.math.abs
 
 class MainActivity : AppCompatActivity() {
+    companion object {
+        const val REQUEST_IMAGE_CAPTURE = 100
+        const val CAMERA_PERMISSION_CODE = 101
+    }
 
     val vm: MainActivityViewModel by viewModels()
     lateinit var imageView: ImageView
-    //lateinit var takePicBtn: Button
-    val REQUEST_IMAGE_CAPTURE = 100
+    lateinit var takePicBtn: Button
+    lateinit var currentPhotoPath: String
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Enable AR-related functionality on ARCore supported devices only.
-       //maybeEnableArButton()
+        //Request the user access to the camera
+        val cameraPermission = Manifest.permission.CAMERA
+        if (ContextCompat.checkSelfPermission(this, cameraPermission) != PackageManager.PERMISSION_GRANTED){
+            ActivityCompat.requestPermissions(this, arrayOf(cameraPermission), CAMERA_PERMISSION_CODE)
+        }
+        else{
+            println("Permission to camera access granted")
+        }
 
         val logoutBtn = findViewById<Button>(R.id.logoutButton)
         imageView = findViewById(R.id.cameraImageView)
-
 
         logoutBtn.setOnClickListener {
             val toLogin = Intent(this, LoginActivity::class.java)
@@ -46,104 +70,86 @@ class MainActivity : AppCompatActivity() {
             vm.logout()
         }
 
-//        // Set a camera configuration that usese the front-facing camera.
-//        val filter = CameraConfigFilter(session).setFacingDirection(CameraConfig.FacingDirection.FRONT)
-//        val cameraConfig = session.getSupportedCameraConfigs(filter)[0]
-//        session.cameraConfig = cameraConfig
-
+        val takePicBtn = findViewById<Button>(R.id.takePicBtn)
+        takePicBtn.setOnClickListener {
+//            val takePictureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+//            startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE)
+            dispatchTakePictureIntent()
+        }
     }
 
-//    // requestInstall(Activity, true) will triggers installation of
-//// Google Play Services for AR if necessary.
-//    var mUserRequestedInstall = true
-//
-//    override fun onResume() {
-//        super.onResume()
-//
-//        // Check camera permission.
-//        if (!CameraPermissionHelper.hasCameraPermission(this)) {
-//            CameraPermissionHelper.requestCameraPermission(this)
-//            return
-//        }
-//
-//
-//        // Ensure that Google Play Services for AR and ARCore device profile data are
-//        // installed and up to date.
-//        try {
-//            if (mSession == null) {
-//                when (ArCoreApk.getInstance().requestInstall(this, mUserRequestedInstall)) {
-//                    ArCoreApk.InstallStatus.INSTALLED -> {
-//                        // Success: Safe to create the AR session.
-//                        var mSession = Session(this)
-//                    }
-//                    ArCoreApk.InstallStatus.INSTALL_REQUESTED -> {
-//                        // When this method returns `INSTALL_REQUESTED`:
-//                        // 1. ARCore pauses this activity.
-//                        // 2. ARCore prompts the user to install or update Google Play
-//                        //    Services for AR (market://details?id=com.google.ar.core).
-//                        // 3. ARCore downloads the latest device profile data.
-//                        // 4. ARCore resumes this activity. The next invocation of
-//                        //    requestInstall() will either return `INSTALLED` or throw an
-//                        //    exception if the installation or update did not succeed.
-//                        mUserRequestedInstall = false
-//                        return
-//                    }
-//                }
-//            }
-//        } catch (e: UnavailableUserDeclinedInstallationException) {
-//            // Display an appropriate message to the user and return gracefully.
-//            Toast.makeText(this, "Error: " + e.localizedMessage, Toast.LENGTH_SHORT).show()
-//            return
-//        } catch () {
-//            return  // mSession remains null, since session creation has failed.
-//        }
-//    }
-////
-////
-//    fun maybeEnableArButton() {
-//        val mArButton = true
-//        val availability = ArCoreApk.getInstance().checkAvailability(this)
-//        if (availability.isTransient) {
-//            // Continue to query availability at 5Hz while compatibility is checked in the background.
-//            Handler().postDelayed({
-//                maybeEnableArButton()
-//            }, 200)
-//        }
-//        if (availability.isSupported) {
-//            mArButton.visibility = View.VISIBLE
-//            mArButton.isEnabled = true
-//        } else { // The device is unsupported or unknown.
-//            mArButton.visibility = View.INVISIBLE
-//            mArButton.isEnabled = false
-//        }
-//    }
-////
-////    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-////        /*if(requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
-////            val imageBitmap = data?.extras?.get("data") as Bitmap
-////            imageView.setImageBitmap(imageBitmap)
-////        }
-////        else {
-////            super.onActivityResult(requestCode, resultCode, data)
-////        }*/
-////    }
-////
-//    override fun onRequestPermissionsResult(
-//        requestCode: Int,
-//        permissions: Array<String>,
-//        results: IntArray
-//    ) {
-//        super.onRequestPermissionsResult(requestCode, permissions, results)
-//        if (!CameraPermissionHelper.hasCameraPermission(this)) {
-//            Toast.makeText(this, "Camera permission is needed to run this application", Toast.LENGTH_LONG)
-//                .show()
-//            if (!CameraPermissionHelper.shouldShowRequestPermissionRationale(this)) {
-//                // Permission denied with checking "Do not ask again".
-//                CameraPermissionHelper.launchPermissionSettings(this)
-//            }
-//            finish()
-//        }
-//    }
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK){
+//            currentPhotoPath = createImageFile().absolutePath
+            println("Path $currentPhotoPath")
+            val imageBitmap = BitmapFactory.decodeFile(currentPhotoPath)
+            imageView.setImageBitmap(imageBitmap)
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == CAMERA_PERMISSION_CODE){
+            if(grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED){
+                //permission granted, start using the camera
+            }
+            else{
+                //Permission denied, notify the user and provide an option to grant access
+                AlertDialog.Builder(this)
+                    .setTitle("Camera Permission Required")
+                    .setMessage("This app requires camera permission to function properly")
+                    .setPositiveButton("Go to Settings"){_, _ ->
+                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                        intent.data = Uri.fromParts("package", packageName, null)
+                        startActivity(intent)
+                    }
+                    .setNegativeButton("Cancel"){ dialog, _ ->
+                        dialog.dismiss()
+                    }
+                    .show()
+            }
+        }
+    }
+
+    private fun createImageFile(): File {
+        // Create an image file name
+        val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val storageDir: File? = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+        return File.createTempFile(
+            "JPEG_${timeStamp}_", /* prefix */
+            ".jpg", /* suffix */
+            storageDir /* directory */
+        ).apply {
+            currentPhotoPath = absolutePath
+        }
+    }
+
+
+    fun dispatchTakePictureIntent(){
+        Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { takePictureIntent ->
+            takePictureIntent.resolveActivity(packageManager)?.also {
+                val photoFile: File? = try{
+                    createImageFile()
+                } catch (ex: IOException){
+                    null
+                }
+                photoFile?.also {
+                    val photoUri: Uri = FileProvider.getUriForFile(
+                        Objects.requireNonNull(applicationContext),
+                        BuildConfig.APPLICATION_ID + ".provider",
+                        it
+                        )
+                    takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri)
+                    startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE)
+                }
+            }
+        }
+    }
 
 }
 
