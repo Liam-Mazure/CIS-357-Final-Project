@@ -11,7 +11,10 @@ import com.google.ar.core.exceptions.CameraNotAvailableException
 import com.google.ar.sceneform.FrameTime
 import com.google.ar.sceneform.Node
 import com.google.ar.sceneform.Scene
+import com.google.ar.sceneform.math.Quaternion
 import com.google.ar.sceneform.math.Vector3
+import com.google.ar.sceneform.rendering.ModelRenderable
+import com.google.ar.sceneform.rendering.Texture
 import com.google.ar.sceneform.ux.ArFragment
 
 
@@ -38,13 +41,13 @@ class ARCoreActivity : AppCompatActivity(), Scene.OnUpdateListener {
 
         //Configs
         val config = Config(session)
-        config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+        config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL
         config.updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
         config.focusMode = Config.FocusMode.AUTO
         config.lightEstimationMode = Config.LightEstimationMode.AMBIENT_INTENSITY
         config.cloudAnchorMode = Config.CloudAnchorMode.DISABLED
         config.depthMode = Config.DepthMode.DISABLED
-        config.augmentedFaceMode = Config.AugmentedFaceMode.DISABLED //Change this later
+        config.augmentedFaceMode = Config.AugmentedFaceMode.MESH3D
         config.instantPlacementMode = Config.InstantPlacementMode.DISABLED
         session.configure(config)
 
@@ -52,12 +55,6 @@ class ARCoreActivity : AppCompatActivity(), Scene.OnUpdateListener {
         // Set up AR fragment and add update listener
         arFragment = supportFragmentManager.findFragmentById(R.id.ar_fragment) as ArFragment
         arFragment.arSceneView.scene.addOnUpdateListener(this)
-
-        // Show plane discovery controller and disable instruction view
-        arFragment.planeDiscoveryController.apply {
-            show()
-            setInstructionView(null)
-        }
 
         // Show plane visualizations
         arFragment.arSceneView.planeRenderer.isVisible = true
@@ -83,6 +80,33 @@ class ARCoreActivity : AppCompatActivity(), Scene.OnUpdateListener {
                     val centerNode = Node()
                     centerNode.setParent(arFragment.arSceneView.scene)
                     centerNode.localPosition = Vector3(centerPose.tx(), centerPose.ty(), centerPose.tz())
+                }
+            }
+
+            val augmentedFaces = session.getAllTrackables(AugmentedFace::class.java)
+            augmentedFaces.forEach{ face ->
+                if (face.trackingState == TrackingState.TRACKING){
+                    //Create a new node to attach the 3D model to
+                    val faceNode = Node()
+
+                    //Set position of the node to the center pose of the augmented face
+                    faceNode.localPosition = Vector3(face.centerPose.tx(),face.centerPose.ty(),face.centerPose.tz())
+
+                    //Set the rotation of the node to the rotation of the augmented face
+                    faceNode.localRotation = Quaternion(face.centerPose.qx(), face.centerPose.qy(), face.centerPose.qz(), face.centerPose.qw())
+
+                    //Load 3D model and add it as a child of the node
+                    val faceModel = ModelRenderable.builder()
+                        .setSource(this, R.raw.fox_face)
+                        .build()
+                        .exceptionally { throwable ->
+                            Toast.makeText(this, "Unable to load model", Toast.LENGTH_LONG).show()
+                            null
+                        }
+                    faceNode.renderable = faceModel.get()
+
+                    //Attach the node to the scene
+                    arFragment.arSceneView.scene.addChild(faceNode)
                 }
             }
         }
