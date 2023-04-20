@@ -43,11 +43,11 @@ class MainActivity : AppCompatActivity() {
     companion object {
         const val REQUEST_IMAGE_CAPTURE = 100
         const val CAMERA_PERMISSION_CODE = 101
+        const val AR_ACTIVITY_REQUEST_CODE = 102
     }
 
     val vm: MainActivityViewModel by viewModels()
     lateinit var imageView: ImageView
-    lateinit var currentPhotoPath: String
     lateinit var session: Session
 
 
@@ -81,17 +81,18 @@ class MainActivity : AppCompatActivity() {
         takePicBtn.setOnClickListener {
 //            dispatchTakePictureIntent()
             val takePicIntent = Intent(this, ARCoreActivity::class.java)
-            startActivity(takePicIntent)
+            startActivityForResult(takePicIntent, AR_ACTIVITY_REQUEST_CODE)
         }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK){
-//            currentPhotoPath = createImageFile().absolutePath
-            println("Path $currentPhotoPath")
-            val imageBitmap = BitmapFactory.decodeFile(currentPhotoPath)
-            imageView.setImageBitmap(imageBitmap)
+        if (requestCode == AR_ACTIVITY_REQUEST_CODE && resultCode == RESULT_OK){
+            val byteArray = data?.getByteArrayExtra("picture")
+            if (byteArray != null){
+                val bitmap = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
+                imageView.setImageBitmap(bitmap)
+            }
         }
     }
 
@@ -133,9 +134,7 @@ class MainActivity : AppCompatActivity() {
             "JPEG_${timeStamp}_", /* prefix */
             ".jpg", /* suffix */
             storageDir /* directory */
-        ).apply {
-            currentPhotoPath = absolutePath
-        }
+        )
     }
 
     // Verify that ARCore is installed and using the current version.

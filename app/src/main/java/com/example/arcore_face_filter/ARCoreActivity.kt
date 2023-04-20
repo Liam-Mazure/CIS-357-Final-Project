@@ -1,11 +1,16 @@
 package com.example.arcore_face_filter
 
+import android.app.Activity
 import android.content.ContentValues.TAG
+import android.content.Intent
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ViewModelProvider
 import com.google.ar.core.*
 import com.google.ar.core.exceptions.CameraNotAvailableException
 import com.google.ar.sceneform.FrameTime
@@ -16,6 +21,7 @@ import com.google.ar.sceneform.math.Vector3
 import com.google.ar.sceneform.rendering.ModelRenderable
 import com.google.ar.sceneform.rendering.Texture
 import com.google.ar.sceneform.ux.ArFragment
+import java.io.ByteArrayOutputStream
 
 
 class ARCoreActivity : AppCompatActivity(), Scene.OnUpdateListener {
@@ -26,9 +32,27 @@ class ARCoreActivity : AppCompatActivity(), Scene.OnUpdateListener {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_arcore)
 
+        val vm = ViewModelProvider(this).get(ARCoreViewModel::class.java)
+
         val backBtn = findViewById<Button>(R.id.backBtn)
         backBtn.setOnClickListener {
+            if (vm.recentPicture != null){
+                val backToMain = Intent(this, MainActivity::class.java)
+
+                //Compress the bitmap
+                val stream = ByteArrayOutputStream()
+                vm.recentPicture!!.compress(Bitmap.CompressFormat.JPEG, 80, stream)
+                val byteArray = stream.toByteArray()
+
+                backToMain.putExtra("picture", byteArray)
+                setResult(Activity.RESULT_OK, backToMain)
+            }
             finish()
+        }
+
+        val takePicBtn = findViewById<Button>(R.id.takePicBtn)
+        takePicBtn.setOnClickListener {
+            vm.takePicture(this, arFragment)
         }
 
         //Initialize the ARCore session
