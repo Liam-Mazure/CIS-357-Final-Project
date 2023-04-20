@@ -23,12 +23,16 @@ import com.google.ar.core.CameraConfigFilter
 import com.google.ar.core.Session
 import com.google.ar.core.exceptions.UnavailableUserDeclinedInstallationException
 import android.Manifest
+import android.content.ContentValues.TAG
 import android.graphics.BitmapFactory
+import android.graphics.Camera
 import android.net.Uri
 import android.os.Environment
 import android.provider.Settings
+import android.util.Log
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.FileProvider
+import com.google.ar.core.exceptions.UnavailableException
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -43,13 +47,16 @@ class MainActivity : AppCompatActivity() {
 
     val vm: MainActivityViewModel by viewModels()
     lateinit var imageView: ImageView
-    lateinit var takePicBtn: Button
     lateinit var currentPhotoPath: String
+    lateinit var session: Session
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        //Check if AR is supported and installed on device
+        println("\nIs ARCore Supported? ${isARCoreSupportedAndUpToDate()}")
 
         //Request the user access to the camera
         val cameraPermission = Manifest.permission.CAMERA
@@ -72,9 +79,9 @@ class MainActivity : AppCompatActivity() {
 
         val takePicBtn = findViewById<Button>(R.id.takePicBtn)
         takePicBtn.setOnClickListener {
-//            val takePictureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-//            startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE)
-            dispatchTakePictureIntent()
+//            dispatchTakePictureIntent()
+            val takePicIntent = Intent(this, ARCoreActivity::class.java)
+            startActivity(takePicIntent)
         }
     }
 
@@ -116,6 +123,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+
+
     private fun createImageFile(): File {
         // Create an image file name
         val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
@@ -126,6 +135,43 @@ class MainActivity : AppCompatActivity() {
             storageDir /* directory */
         ).apply {
             currentPhotoPath = absolutePath
+        }
+    }
+
+    // Verify that ARCore is installed and using the current version.
+    fun isARCoreSupportedAndUpToDate(): Boolean {
+        return when (ArCoreApk.getInstance().checkAvailability(this)) {
+            ArCoreApk.Availability.SUPPORTED_INSTALLED -> true
+            ArCoreApk.Availability.SUPPORTED_APK_TOO_OLD, ArCoreApk.Availability.SUPPORTED_NOT_INSTALLED -> {
+                try {
+                    // Request ARCore installation or update if needed.
+                    when (ArCoreApk.getInstance().requestInstall(this, true)) {
+                        ArCoreApk.InstallStatus.INSTALL_REQUESTED -> {
+                            Log.i(TAG, "ARCore installation requested.")
+                            false
+                        }
+                        ArCoreApk.InstallStatus.INSTALLED -> true
+                    }
+                } catch (e: UnavailableException) {
+                    Log.e(TAG, "ARCore not installed", e)
+                    false
+                }
+            }
+
+            ArCoreApk.Availability.UNSUPPORTED_DEVICE_NOT_CAPABLE ->
+                // This device is not supported for AR.
+                false
+
+            ArCoreApk.Availability.UNKNOWN_CHECKING -> {
+                // ARCore is checking the availability with a remote query.
+                // This function should be called again after waiting 200 ms to determine the query result.
+                false
+            }
+            ArCoreApk.Availability.UNKNOWN_ERROR, ArCoreApk.Availability.UNKNOWN_TIMED_OUT -> {
+                // There was an error checking for AR availability. This may be due to the device being offline.
+                // Handle the error appropriately.
+                false
+            }
         }
     }
 

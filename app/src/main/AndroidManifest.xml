@@ -46,6 +46,13 @@
                 android:name="android.app.lib_name"
                 android:value="" />
         </activity>
+        <activity
+            android:name=".ARCoreActivity"
+            android:exported="true">
+            <meta-data
+                android:name="android.app.lib_name"
+                android:value=""/>
+        </activity>
 
         <!-- "AR Required" app, requires "Google Play Services for AR" (ARCore)
          to be installed, as the app does not include any non-AR features. -->
